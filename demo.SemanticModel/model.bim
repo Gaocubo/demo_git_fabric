@@ -578,6 +578,55 @@
             "displayFolder": "Medidas",
             "expression": "SUM(transacoes[Total])",
             "lineageTag": "13a2531e-0774-4007-bdbc-a94914f1c798"
+          },
+          {
+            "name": "Cotação corrigida",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "displayFolder": "Medidas",
+            "expression": [
+              "",
+              "",
+              "VAR __DataCtx = MAX(calendario[Data]) ",
+              "",
+              "VAR __UltimaDataComCotacao = ",
+              "    CALCULATE(",
+              "        LASTNONBLANK(calendario[Data], [Cotação do dia]),",
+              "        calendario[Data] <= __DataCtx",
+              "    )",
+              "",
+              "RETURN",
+              "    CALCULATE(",
+              "        [Cotação do dia],",
+              "        calendario[Data] = __UltimaDataComCotacao",
+              "    )"
+            ],
+            "lineageTag": "cb55b61f-cea1-492a-8622-b84feeef652b"
+          },
+          {
+            "name": "Total R$",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "displayFolder": "Medidas",
+            "expression": [
+              "",
+              "SUMX(",
+              "    moedas,",
+              "    SUMX(",
+              "        calendario,",
+              "        COALESCE([Cotação corrigida], 1) * [Valor Total] ",
+              "    )",
+              ") "
+            ],
+            "lineageTag": "46b1e574-3f23-48a0-ac09-eb702c2cf407"
           }
         ],
         "partitions": [
