@@ -1,0 +1,697 @@
+{
+  "compatibilityLevel": 1567,
+  "model": {
+    "annotations": [
+      {
+        "name": "__PBI_TimeIntelligenceEnabled",
+        "value": "0"
+      },
+      {
+        "name": "PBIDesktopVersion",
+        "value": "2.138.1203.0 (24.11)"
+      },
+      {
+        "name": "PBI_QueryOrder",
+        "value": "[\"base_transacoes\",\"data_inicial\",\"data_final\",\"moedas\",\"calendario\",\"transacoes\",\"getCotacoes\",\"cotacoes\"]"
+      },
+      {
+        "name": "PBI_ProTooling",
+        "value": "[\"DevMode\"]"
+      }
+    ],
+    "culture": "pt-BR",
+    "cultures": [
+      {
+        "name": "pt-BR",
+        "linguisticMetadata": {
+          "content": {
+            "Language": "en-US",
+            "Version": "1.0.0"
+          },
+          "contentType": "json"
+        }
+      }
+    ],
+    "dataAccessOptions": {
+      "legacyRedirects": true,
+      "returnErrorValuesAsNull": true
+    },
+    "defaultPowerBIDataSourceVersion": "powerBI_V3",
+    "expressions": [
+      {
+        "name": "base_transacoes",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Text"
+          }
+        ],
+        "expression": "\"C:\\Users\\Gildo Gomes\\OneDrive - GAOCUBO CONSULTORIA E TREINAMENTOS\\G³-Consultoria\\projetos\\projeto-cotacoes-git-github\\transacoes.xlsx\" meta [IsParameterQuery=true, Type=\"Text\", IsParameterQueryRequired=true]",
+        "kind": "m",
+        "lineageTag": "b1021c8b-6a98-43db-9a75-6dac4c1f939b",
+        "queryGroup": "Parametros"
+      },
+      {
+        "name": "data_inicial",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Date"
+          }
+        ],
+        "expression": "#date(2024, 11, 1) meta [IsParameterQuery=true, Type=\"Date\", IsParameterQueryRequired=true]",
+        "kind": "m",
+        "lineageTag": "f3f82616-d07c-4c5f-a366-bfb0e69f847c",
+        "queryGroup": "Parametros"
+      },
+      {
+        "name": "getCotacoes",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Function"
+          }
+        ],
+        "expression": [
+          "let",
+          "    getCotacoes = (dataInicial as date, dataFinal as date, moeda as text, pagina as number) as table =>",
+          "    let",
+          "        url = \"https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata\",",
+          "        endpoint = \"CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)\",",
+          "        query = [",
+          "            #\"@moeda\" = \"'\" & moeda & \"'\",",
+          "            #\"@dataInicial\" = \"'\" &  Date.ToText(dataInicial,\"MM-dd-yyyy\") & \"'\",",
+          "            #\"@dataFinalCotacao\" = \"'\" & Date.ToText(dataFinal,\"MM-dd-yyyy\") & \"'\",",
+          "            #\"$top\" = Number.ToText(100),",
+          "            #\"$skip\" = Number.ToText((pagina-1)*100),",
+          "            #\"$format\"= \"json\"",
+          "        ],",
+          "        request = Web.Contents(",
+          "            url,",
+          "            [ RelativePath = endpoint, Query = query ]",
+          "        ),",
+          "        response = Json.Document(request, 65001), ",
+          "        lista = response[value] ",
+          "    in",
+          "        Table.FromRecords(lista), ",
+          "",
+          "    getCotacoesPaginacao = (dataInicial as date, dataFinal as date, moeda as text) as table =>",
+          "    let",
+          "        todasPaginas = List.Generate(",
+          "            ( ) => [ pagina = 1, cotacao = try getCotacoes(dataInicial, dataFinal, moeda, pagina) otherwise null ],",
+          "                each [cotacao] <> null and Table.RowCount([cotacao]) > 0,",
+          "                each [ pagina = [pagina] + 1, cotacao = try getCotacoes( dataInicial, dataFinal, moeda, pagina ) otherwise null],",
+          "                each [cotacao]",
+          "        ) ",
+          "    in",
+          "        Table.AddColumn(Table.Combine(todasPaginas), \"Moeda\", each moeda, type text),",
+          "",
+          "    processaCotacoes = (dataInicial as date, dataFinal as date) as table =>",
+          "    let",
+          "        moedas = List.Select(moedas[Moeda], each _ <> \"BRL\"),",
+          "",
+          "        todasCotacoes = List.Accumulate(",
+          "            moedas,",
+          "            #table({},{}),",
+          "            (s, c) => ",
+          "            Table.Combine({s, getCotacoesPaginacao(dataInicial, dataFinal, c)})",
+          "",
+          "        ),",
+          "",
+          "        colunasSelecionadas = Table.SelectColumns(",
+          "            todasCotacoes,",
+          "            { \"Moeda\", \"dataHoraCotacao\", \"cotacaoCompra\", \"tipoBoletim\" }",
+          "        ),",
+          "",
+          "        colunasRenomeadas = Table.RenameColumns(",
+          "            colunasSelecionadas,",
+          "            {",
+          "                {\"dataHoraCotacao\", \"DataHora\"},",
+          "                {\"cotacaoCompra\", \"Cotacao\"},",
+          "                {\"tipoBoletim\", \"TipoBoletim\"}",
+          "            }",
+          "        ),",
+          "",
+          "        tipoAlterado = Table.TransformColumnTypes(",
+          "            colunasRenomeadas,",
+          "            {",
+          "                {\"DataHora\", DateTime.Type},",
+          "                {\"Cotacao\", Number.Type}, ",
+          "                {\"TipoBoletim\", Text.Type}",
+          "            }",
+          "        ),",
+          "",
+          "        dataAdicionada = Table.AddColumn(",
+          "            tipoAlterado,",
+          "            \"Data\", ",
+          "            each DateTime.Date([DataHora]),",
+          "            type date",
+          "        )",
+          "",
+          "    in",
+          "        dataAdicionada   ",
+          "",
+          "in",
+          "    processaCotacoes"
+        ],
+        "kind": "m",
+        "lineageTag": "90ee51e6-041b-40fb-854e-34c0c8d5e9c8",
+        "queryGroup": "Funcoes"
+      },
+      {
+        "name": "data_final",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Date"
+          }
+        ],
+        "expression": "DateTime.Date(DateTime.LocalNow())",
+        "kind": "m",
+        "lineageTag": "09806c35-fc65-401f-8785-a5748813761b",
+        "queryGroup": "Parametros"
+      }
+    ],
+    "queryGroups": [
+      {
+        "annotations": [
+          {
+            "name": "PBI_QueryGroupOrder",
+            "value": "0"
+          }
+        ],
+        "folder": "Parametros"
+      },
+      {
+        "annotations": [
+          {
+            "name": "PBI_QueryGroupOrder",
+            "value": "2"
+          }
+        ],
+        "folder": "Dimensoes"
+      },
+      {
+        "annotations": [
+          {
+            "name": "PBI_QueryGroupOrder",
+            "value": "3"
+          }
+        ],
+        "folder": "Fatos"
+      },
+      {
+        "annotations": [
+          {
+            "name": "PBI_QueryGroupOrder",
+            "value": "1"
+          }
+        ],
+        "folder": "Funcoes"
+      }
+    ],
+    "relationships": [
+      {
+        "name": "3dd85a6f-d3d1-c9ed-e0bd-b14249242d6c",
+        "fromColumn": "Moeda",
+        "fromTable": "transacoes",
+        "toColumn": "Moeda",
+        "toTable": "moedas"
+      },
+      {
+        "name": "f41115e1-4006-68f2-e22e-b8c29972870b",
+        "fromColumn": "Moeda",
+        "fromTable": "cotacoes",
+        "toColumn": "Moeda",
+        "toTable": "moedas"
+      },
+      {
+        "name": "8a19f7ec-9ccd-0229-0894-feff2b091d26",
+        "fromColumn": "Data",
+        "fromTable": "transacoes",
+        "toColumn": "Data",
+        "toTable": "calendario"
+      },
+      {
+        "name": "7a71cedf-ebad-5d78-2a56-94050999c660",
+        "fromColumn": "Data",
+        "fromTable": "cotacoes",
+        "toColumn": "Data",
+        "toTable": "calendario"
+      }
+    ],
+    "sourceQueryCulture": "pt-BR",
+    "tables": [
+      {
+        "name": "moedas",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "name": "Moeda",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "4f7e74e4-0ca5-4d95-8794-d01144f4a113",
+            "sourceColumn": "Moeda",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Nome",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "18f77af5-bca9-491c-9458-97aef3ba3544",
+            "sourceColumn": "Nome",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Formato",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "dd69856d-d0d0-406f-94be-5b50cb12cbb3",
+            "sourceColumn": "Formato",
+            "summarizeBy": "none"
+          }
+        ],
+        "lineageTag": "a8edc441-1a09-404f-a67e-4b2d30b59b5e",
+        "partitions": [
+          {
+            "name": "moedas",
+            "mode": "import",
+            "queryGroup": "Dimensoes",
+            "source": {
+              "expression": [
+                "let",
+                "    source = Table.FromRows(",
+                "        {",
+                "            {\"BRL\", \"Real brasileiro\", \"R$ #,##0.00;R$ #,##0.00;-\"},",
+                "            {\"AUD\", \"Dólar australiano\", \"$ #,##0.00;$ #,##0.00;-\"},",
+                "            {\"CAD\", \"Dólar canadense\", \"$ #,##0.00;$ #,##0.00;-\"},",
+                "            {\"CHF\", \"Franco suíço\", \"Fr #,##0.00;Fr #,##0.00;-\"},",
+                "            {\"DKK\", \"Coroa dinamarquesa\", \"kr #,##0.00;kr #,##0.00;-\"},",
+                "            {\"EUR\", \"Euro\", \"€ #,##0.00;€ #,##0.00;-\"},",
+                "            {\"GBP\", \"Libra Esterlina\", \"£ #,##0.00;£ #,##0.00;-\"},",
+                "            {\"JPY\", \"Iene\", \"¥ #,##0;¥ #,##0;-\"},",
+                "            {\"NOK\", \"Coroa norueguesa\", \"kr #,##0.00;kr #,##0.00;-\"},",
+                "            {\"SEK\", \"Coroa sueca\", \"kr #,##0.00;kr #,##0.00;-\"},",
+                "            {\"USD\", \"Dólar dos Estados Unidos\", \"$ #,##0.00;$ #,##0.00;-\"}",
+                "        },",
+                "        {\"Moeda\", \"Nome\", \"Formato\"}",
+                "    ),",
+                "    ",
+                "    changedType = Table.TransformColumnTypes(",
+                "        source,{",
+                "            {\"Moeda\", type text}, ",
+                "            {\"Nome\", type text}, ",
+                "            {\"Formato\", type text}",
+                "        }",
+                "    )",
+                "",
+                "in",
+                "    changedType"
+              ],
+              "type": "m"
+            }
+          }
+        ]
+      },
+      {
+        "name": "calendario",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "name": "Data",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "Short Date",
+            "isKey": true,
+            "lineageTag": "3e966879-2c0a-4374-ab73-b07bfed7c256",
+            "sourceColumn": "Data",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Ano",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "User"
+              }
+            ],
+            "dataType": "int64",
+            "formatString": "0",
+            "lineageTag": "582044b6-c039-441a-8224-95a840024963",
+            "sourceColumn": "Ano",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "MesAno",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "changedProperties": [
+              {
+                "property": "SortByColumn"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "63aa1004-c0a7-4c08-ab09-539ade286908",
+            "sortByColumn": "MesInicio",
+            "sourceColumn": "MesAno",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "MesInicio",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "Short Date",
+            "lineageTag": "112093aa-325f-40e7-9055-d7f8d5ecf2ba",
+            "sourceColumn": "MesInicio",
+            "summarizeBy": "none"
+          }
+        ],
+        "dataCategory": "Time",
+        "lineageTag": "67b876cc-c6c5-4020-8463-b92a9eb2a9cf",
+        "partitions": [
+          {
+            "name": "calendario",
+            "mode": "import",
+            "queryGroup": "Dimensoes",
+            "source": {
+              "expression": [
+                "let",
+                "    dataInicial = data_inicial, ",
+                "    dataFinal = data_final, ",
+                "    ",
+                "    datas = List.Dates(",
+                "        dataInicial, ",
+                "        Duration.Days(dataFinal-dataInicial) + 1, ",
+                "        #duration(1, 0, 0, 0)",
+                "    ),",
+                "",
+                "    calendario = #table(",
+                "        type table[",
+                "            Data = date,",
+                "            Ano = Int64.Type,",
+                "            MesAno = text,",
+                "            MesInicio = date",
+                "        ],",
+                "        List.Transform(",
+                "            datas,",
+                "            each {",
+                "                _,",
+                "                Date.Year(_),",
+                "                Date.ToText(_, [Format=\"MMM/yy\", Culture=\"pt-BR\"]),",
+                "                Date.StartOfMonth(_)",
+                "            }",
+                "        )",
+                "    )",
+                "",
+                "in",
+                "    calendario"
+              ],
+              "type": "m"
+            }
+          }
+        ]
+      },
+      {
+        "name": "transacoes",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "name": "ID",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "double",
+            "lineageTag": "b66e344d-4577-416e-b8f6-7c2c1668abf8",
+            "sourceColumn": "ID",
+            "summarizeBy": "count"
+          },
+          {
+            "name": "Data",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "Short Date",
+            "lineageTag": "d29b811b-0548-45fc-8051-3a7cea03e36a",
+            "sourceColumn": "Data",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Total",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "double",
+            "lineageTag": "b3398676-efdc-4bf0-8aa5-075e9de3089d",
+            "sourceColumn": "Total",
+            "summarizeBy": "sum"
+          },
+          {
+            "name": "Moeda",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "fbb95376-4f85-4885-b7ea-30cca7f137a5",
+            "sourceColumn": "Moeda",
+            "summarizeBy": "none"
+          }
+        ],
+        "lineageTag": "c83eadc1-fe6c-4dfc-839f-d77f8e70622c",
+        "partitions": [
+          {
+            "name": "transacoes",
+            "mode": "import",
+            "queryGroup": "Fatos",
+            "source": {
+              "expression": [
+                "let",
+                "    source = Excel.Workbook(",
+                "        File.Contents(base_transacoes), ",
+                "        true, ",
+                "        null",
+                "    ),",
+                "    ",
+                "    transacoes_Table = source{[Item=\"transacoes\",Kind=\"Table\"]}[Data],",
+                "    ",
+                "    datesRestricted = Table.SelectRows(",
+                "        transacoes_Table, ",
+                "        each [Data] >= data_inicial and [Data] <= data_final",
+                "    )",
+                "in",
+                "    datesRestricted"
+              ],
+              "type": "m"
+            }
+          }
+        ]
+      },
+      {
+        "name": "cotacoes",
+        "annotations": [
+          {
+            "name": "PBI_NavigationStepName",
+            "value": "Navegação"
+          },
+          {
+            "name": "PBI_ResultType",
+            "value": "Table"
+          }
+        ],
+        "columns": [
+          {
+            "name": "Moeda",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "4e0cdd60-1746-4a20-9e01-dae0f3f884de",
+            "sourceColumn": "Moeda",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "DataHora",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "General Date",
+            "lineageTag": "18754939-da91-41a5-8f7d-d2b970e344d6",
+            "sourceColumn": "DataHora",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Cotacao",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "User"
+              },
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "dataType": "double",
+            "lineageTag": "66d833b9-6e69-47f5-948a-ae7e1d04590e",
+            "sourceColumn": "Cotacao",
+            "summarizeBy": "average"
+          },
+          {
+            "name": "TipoBoletim",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              }
+            ],
+            "dataType": "string",
+            "lineageTag": "1a891f56-4123-4562-8841-a035d22a240c",
+            "sourceColumn": "TipoBoletim",
+            "summarizeBy": "none"
+          },
+          {
+            "name": "Data",
+            "annotations": [
+              {
+                "name": "SummarizationSetBy",
+                "value": "Automatic"
+              },
+              {
+                "name": "UnderlyingDateTimeDataType",
+                "value": "Date"
+              }
+            ],
+            "dataType": "dateTime",
+            "formatString": "Short Date",
+            "lineageTag": "be2ba8fc-faa8-418f-b629-3a7647419f94",
+            "sourceColumn": "Data",
+            "summarizeBy": "none"
+          }
+        ],
+        "lineageTag": "584fe86f-f8d0-4fe0-8092-5072ae4ebb10",
+        "partitions": [
+          {
+            "name": "cotacoes",
+            "mode": "import",
+            "queryGroup": "Fatos",
+            "source": {
+              "expression": "getCotacoes(data_inicial, data_final)",
+              "type": "m"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
