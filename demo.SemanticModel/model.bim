@@ -508,6 +508,7 @@
               }
             ],
             "dataType": "double",
+            "displayFolder": "Colunas",
             "lineageTag": "b66e344d-4577-416e-b8f6-7c2c1668abf8",
             "sourceColumn": "ID",
             "summarizeBy": "count"
@@ -525,6 +526,7 @@
               }
             ],
             "dataType": "dateTime",
+            "displayFolder": "Colunas",
             "formatString": "Short Date",
             "lineageTag": "d29b811b-0548-45fc-8051-3a7cea03e36a",
             "sourceColumn": "Data",
@@ -543,6 +545,7 @@
               }
             ],
             "dataType": "double",
+            "displayFolder": "Colunas",
             "lineageTag": "b3398676-efdc-4bf0-8aa5-075e9de3089d",
             "sourceColumn": "Total",
             "summarizeBy": "sum"
@@ -556,12 +559,27 @@
               }
             ],
             "dataType": "string",
+            "displayFolder": "Colunas",
             "lineageTag": "fbb95376-4f85-4885-b7ea-30cca7f137a5",
             "sourceColumn": "Moeda",
             "summarizeBy": "none"
           }
         ],
         "lineageTag": "c83eadc1-fe6c-4dfc-839f-d77f8e70622c",
+        "measures": [
+          {
+            "name": "Valor Total",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "displayFolder": "Medidas",
+            "expression": "SUM(transacoes[Total])",
+            "lineageTag": "13a2531e-0774-4007-bdbc-a94914f1c798"
+          }
+        ],
         "partitions": [
           {
             "name": "transacoes",
