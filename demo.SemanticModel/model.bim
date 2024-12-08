@@ -630,6 +630,7 @@
               }
             ],
             "dataType": "string",
+            "displayFolder": "Colunas",
             "lineageTag": "4e0cdd60-1746-4a20-9e01-dae0f3f884de",
             "sourceColumn": "Moeda",
             "summarizeBy": "none"
@@ -643,6 +644,7 @@
               }
             ],
             "dataType": "dateTime",
+            "displayFolder": "Colunas",
             "formatString": "General Date",
             "lineageTag": "18754939-da91-41a5-8f7d-d2b970e344d6",
             "sourceColumn": "DataHora",
@@ -661,6 +663,7 @@
               }
             ],
             "dataType": "double",
+            "displayFolder": "Colunas",
             "lineageTag": "66d833b9-6e69-47f5-948a-ae7e1d04590e",
             "sourceColumn": "Cotacao",
             "summarizeBy": "average"
@@ -674,6 +677,7 @@
               }
             ],
             "dataType": "string",
+            "displayFolder": "Colunas",
             "lineageTag": "1a891f56-4123-4562-8841-a035d22a240c",
             "sourceColumn": "TipoBoletim",
             "summarizeBy": "none"
@@ -691,6 +695,7 @@
               }
             ],
             "dataType": "dateTime",
+            "displayFolder": "Colunas",
             "formatString": "Short Date",
             "lineageTag": "be2ba8fc-faa8-418f-b629-3a7647419f94",
             "sourceColumn": "Data",
@@ -698,6 +703,20 @@
           }
         ],
         "lineageTag": "584fe86f-f8d0-4fe0-8092-5072ae4ebb10",
+        "measures": [
+          {
+            "name": "Cotação do dia",
+            "annotations": [
+              {
+                "name": "PBI_FormatHint",
+                "value": "{\"isGeneralNumber\":true}"
+              }
+            ],
+            "displayFolder": "Medidas",
+            "expression": "AVERAGE(cotacoes[Cotacao]) ",
+            "lineageTag": "e1da0e79-e9f9-40f1-babf-8cd5ba0e9677"
+          }
+        ],
         "partitions": [
           {
             "name": "cotacoes",
